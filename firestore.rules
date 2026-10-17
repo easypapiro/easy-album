@@ -1,0 +1,88 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(slug) {
+      return signedIn()
+        && get(/databases/$(database)/documents/events/$(slug)).data.ownerId == request.auth.uid;
+    }
+
+    function guestPath(slug, uid) {
+      return /databases/$(database)/documents/events/$(slug)/guests/$(uid);
+    }
+
+    // Evento: leggibile da chiunque (la pagina di benvenuto lo mostra prima
+    // dell'accesso), scrivibile solo dagli sposi registrati con email.
+    match /events/{slug} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.auth.token.firebase.sign_in_provider == 'password'
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.slug == slug;
+      allow update: if isOwner(slug)
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.slug == resource.data.slug;
+      allow delete: if isOwner(slug);
+
+      // Invitati: ognuno gestisce il proprio documento (uid anonimo).
+      match /guests/{uid} {
+        allow read: if signedIn();
+        allow create: if signedIn() && request.auth.uid == uid
+          && request.resource.data.uploadCount == 0
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 60;
+        // Il contatore si muove di una unità alla volta e non supera 20.
+        // Gli sposi possono decrementarlo quando eliminano un ricordo.
+        allow update: if signedIn() && (request.auth.uid == uid || isOwner(slug))
+          && request.resource.data.uploadCount is int
+          && request.resource.data.uploadCount >= 0
+          && request.resource.data.uploadCount <= 20
+          && (request.resource.data.uploadCount - resource.data.uploadCount) in [-1, 0, 1]
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uploadCount', 'name']);
+      }
+
+      match /media/{mediaId} {
+        allow read: if signedIn();
+
+        // Ogni nuovo ricordo di un invitato deve incrementare il suo contatore
+        // nella stessa transazione (writeBatch), fino a un massimo di 20.
+        // L'organizzatore non è un invitato: pubblica senza contatore né limite.
+        allow create: if signedIn()
+          && request.resource.data.uploaderId == request.auth.uid
+          && request.resource.data.type in ['photo', 'video']
+          && request.resource.data.likesCount == 0
+          && request.resource.data.likedBy.size() == 0
+          && (
+            isOwner(slug)
+            || getAfter(guestPath(slug, request.auth.uid)).data.uploadCount
+                 == get(guestPath(slug, request.auth.uid)).data.uploadCount + 1
+          );
+
+        // "Mi piace": chiunque può aggiungere/togliere solo il proprio uid.
+        allow update: if signedIn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'likesCount'])
+          && (
+            (request.resource.data.likedBy.toSet().difference(resource.data.likedBy.toSet()) == [request.auth.uid].toSet()
+              && request.resource.data.likesCount == resource.data.likesCount + 1)
+            ||
+            (resource.data.likedBy.toSet().difference(request.resource.data.likedBy.toSet()) == [request.auth.uid].toSet()
+              && request.resource.data.likesCount == resource.data.likesCount - 1)
+          );
+
+        allow delete: if signedIn()
+          && (resource.data.uploaderId == request.auth.uid || isOwner(slug));
+      }
+
+      // Bozza del video ricordo: solo gli sposi.
+      match /video/{docId} {
+        allow read, write: if isOwner(slug);
+      }
+    }
+  }
+}

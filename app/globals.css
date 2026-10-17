@@ -1,26 +1,100 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-jost), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-cormorant), ui-serif, Georgia, serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@theme {
+  --color-cream: #fbf8f4;
+  --color-ink: #2b2622;
+  --color-ink-2: #4a433d;
+  --color-muted: #6b625a;
+  --color-placeholder: #8a7e70;
+  --color-line: #e6ded3;
+  --color-line-strong: #d8cec2;
+  --color-line-soft: #efe8de;
+  --color-dash: #c9bba8;
+  --color-olive: #5e6b4e;
+  --color-olive-dark: #3f4a33;
+  --color-sage: #7a8466;
+  --color-sage-soft: #dde1d3;
+  --color-gold: #a07e4a;
+  --color-gold-soft: #c9a46a;
+  --color-heart: #b4573f;
+  --color-blush: #ead9d0;
+  --color-sand: #e9dfd2;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  background: var(--color-cream);
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/* Inputs at 16px keep iOS Safari from zooming on focus. */
+.field {
+  height: 48px;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 16px;
+  color: var(--color-ink);
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.field:focus {
+  border-color: var(--color-olive);
+  box-shadow: 0 0 0 3px rgb(94 107 78 / 0.15);
+}
+.field::placeholder {
+  color: #a69a8c;
+}
+
+.safe-bottom {
+  padding-bottom: max(26px, env(safe-area-inset-bottom));
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+details > summary {
+  list-style: none;
+  cursor: pointer;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes ken-burns {
+  from { transform: scale(1); }
+  to { transform: scale(1.12); }
+}
+@keyframes slide-in {
+  from { transform: translateX(12%); opacity: 0.4; }
+  to { transform: translateX(0); opacity: 1; }
 }

@@ -1,0 +1,38 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isOwner(slug) {
+      return request.auth != null
+        && firestore.get(/databases/(default)/documents/events/$(slug)).data.ownerId == request.auth.uid;
+    }
+
+    // Foto e video degli invitati: events/{slug}/media/{uid}/{file}
+    match /events/{slug}/media/{uid}/{fileName} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.size < 300 * 1024 * 1024
+        && (request.resource.contentType.matches('image/.*')
+            || request.resource.contentType.matches('video/.*'));
+      allow delete: if request.auth != null && (request.auth.uid == uid || isOwner(slug));
+    }
+
+    // Copertina dell'album: leggibile da chiunque.
+    match /events/{slug}/cover/{fileName} {
+      allow read: if true;
+      allow create, update: if isOwner(slug)
+        && request.resource.size < 15 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if isOwner(slug);
+    }
+
+    // Brani caricati dagli sposi per il video.
+    match /events/{slug}/music/{fileName} {
+      allow read, delete: if isOwner(slug);
+      allow create, update: if isOwner(slug)
+        && request.resource.size < 30 * 1024 * 1024
+        && request.resource.contentType.matches('audio/.*');
+    }
+  }
+}
