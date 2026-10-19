@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Download, ImageIcon, Phone, Play, Plus, Squares } from "@/components/ui/icons";
 import { Branch, RingDivider, Rings } from "@/components/ui/ornaments";
@@ -63,7 +64,14 @@ const FAQ = [
   },
 ];
 
-const STRIP = ["#EAD9D0", "#DDE1D3", "#E4DCCF", "#EFE3D6", "#D9DED6", "#EAD9D0"];
+const STRIP = [
+  { src: "/landing/strip-1.jpg", alt: "Mani degli sposi con le fedi sul bouquet" },
+  { src: "/landing/strip-2.jpg", alt: "Lancio di riso e petali all'uscita dalla chiesa" },
+  { src: "/landing/strip-3.jpg", alt: "Torta nuziale decorata con rose e ulivo" },
+  { src: "/landing/strip-4.jpg", alt: "Invitati che ballano alla festa" },
+  { src: "/landing/strip-5.jpg", alt: "Sposi che camminano tra i filari al tramonto" },
+  { src: "/landing/strip-6.jpg", alt: "Bacio degli sposi tra le stelline degli invitati" },
+];
 
 const h2 = "m-0 font-serif text-[clamp(34px,5vw,46px)] leading-[1.1] font-medium";
 
@@ -117,14 +125,30 @@ export default function Landing() {
               <span className="size-6 rounded-full bg-blush" />
               <span className="text-[11px] font-medium">Chiara Romano</span>
             </div>
-            <div className="flex h-[210px] items-center justify-center bg-sand text-placeholder">
-              <ImageIcon size={40} strokeWidth={1} />
+            <div className="relative h-[210px] bg-sand">
+              <Image
+                src="/landing/feed-1.jpg"
+                alt="Gli sposi ridono durante il brindisi con gli invitati"
+                fill
+                sizes="234px"
+                loading="eager"
+                fetchPriority="high"
+                className="object-cover"
+              />
             </div>
             <div className="flex items-center gap-2 px-3 py-2.5">
               <span className="size-6 rounded-full bg-sage-soft" />
               <span className="text-[11px] font-medium">Luca Bianchi</span>
             </div>
-            <div className="flex-1 bg-sage-soft" />
+            <div className="relative flex-1 bg-sage-soft">
+              <Image
+                src="/landing/feed-2.jpg"
+                alt="Selfie di un gruppo di amici al tavolo del matrimonio"
+                fill
+                sizes="234px"
+                className="object-cover object-[center_30%]"
+              />
+            </div>
           </div>
           <div className="absolute bottom-0 left-[calc(50%-175px)] flex items-center gap-2.5 rounded-[18px] border border-line bg-white p-3">
             <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#2B2622" strokeWidth="1.6" aria-hidden="true">
@@ -190,14 +214,23 @@ export default function Landing() {
             </p>
           </div>
           <div className="flex flex-[1_1_300px] flex-col gap-2.5">
-            <div className="relative flex h-[190px] items-center justify-center rounded-[18px] bg-sand">
-              <span className="flex size-[60px] items-center justify-center rounded-full bg-cream text-ink">
+            <div className="relative flex h-[190px] items-center justify-center overflow-hidden rounded-[18px] bg-sand">
+              <Image
+                src="/landing/video-cover.jpg"
+                alt="Primo ballo degli sposi al tramonto tra gli invitati"
+                fill
+                sizes="(max-width: 768px) 100vw, 520px"
+                className="object-cover object-[center_35%]"
+              />
+              <span className="relative flex size-[60px] items-center justify-center rounded-full bg-cream text-ink">
                 <Play size={22} />
               </span>
             </div>
             <div className="grid grid-cols-6 gap-1">
-              {STRIP.map((c, i) => (
-                <span key={i} className="h-9 rounded-md" style={{ background: c }} />
+              {STRIP.map((s) => (
+                <span key={s.src} className="relative h-12 overflow-hidden rounded-md bg-sand">
+                  <Image src={s.src} alt={s.alt} fill sizes="90px" className="object-cover" />
+                </span>
               ))}
             </div>
           </div>
