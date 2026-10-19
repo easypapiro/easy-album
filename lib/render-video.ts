@@ -31,7 +31,7 @@ export type RenderOptions = {
   signal: AbortSignal;
 };
 
-export type RenderedVideo = { blob: Blob; mimeType: string; ext: "mp4" | "webm" };
+export type RenderedVideo = { blob: Blob; mimeType: string; ext: "mp4" | "webm"; /** seconds */ duration: number };
 
 type Visual =
   | { kind: "image"; source: ImageBitmap; w: number; h: number }
@@ -199,7 +199,12 @@ export async function renderVideo(opts: RenderOptions): Promise<RenderedVideo> {
     });
     await stopped;
     const type = mimeType.split(";")[0];
-    return { blob: new Blob(chunks, { type }), mimeType: type, ext: type === "video/mp4" ? "mp4" : "webm" };
+    return {
+      blob: new Blob(chunks, { type }),
+      mimeType: type,
+      ext: type === "video/mp4" ? "mp4" : "webm",
+      duration: total,
+    };
   } finally {
     cleanup();
   }

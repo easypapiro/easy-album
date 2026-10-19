@@ -1,10 +1,12 @@
 import {
   collection,
+  deleteDoc,
   doc,
   getCountFromServer,
   getDoc,
   getDocs,
   limit,
+  orderBy,
   query,
   runTransaction,
   serverTimestamp,
@@ -14,7 +16,7 @@ import {
 } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref, uploadBytes, uploadBytesResumable } from "firebase/storage";
 import { db, storage } from "./firebase";
-import type { AlbumEvent, VideoDraft } from "./types";
+import type { AlbumEvent, GeneratedVideo, Transition, VideoDraft } from "./types";
 
 /** Paths that would collide with the app's own routes (also /eventi/nuovo). */
 const RESERVED = new Set(["accedi", "registrati", "sposi", "eventi", "nuovo", "api", "admin", "_next"]);
@@ -90,13 +92,16 @@ export async function setCover(event: AlbumEvent, file: Blob): Promise<string> {
 
 export async function getEventStats(slug: string) {
   const media = collection(db(), "events", slug, "media");
-  const [photos, videos] = await Promise.all([
+  const [photos, videos, generated] = await Promise.all([
     getCountFromServer(query(media, where("type", "==", "photo"))),
     getCountFromServer(query(media, where("type", "==", "video"))),
+    // Optional: the dashboard still shows photos and videos if this fails.
+    getCountFromServer(videosCol(slug)).catch(() => null),
   ]);
   return {
     photos: photos.data().count,
     videos: videos.data().count,
+    generated: generated?.data().count ?? null,
   };
 }
 
@@ -107,9 +112,6 @@ export const DEFAULT_DRAFT: VideoDraft = {
   customTrackUrl: null,
   customTrackPath: null,
   transition: "fade",
-  videoUrl: null,
-  videoPath: null,
-  videoType: null,
 };
 
 const draftRef = (slug: string) => doc(db(), "events", slug, "video", "draft");
@@ -130,20 +132,39 @@ export async function uploadTrack(slug: string, file: File) {
   return { path, url: await getDownloadURL(r) };
 }
 
-/** Uploads the generated video and records it on the draft, replacing the previous one. */
+const videosCol = (slug: string) => collection(db(), "events", slug, "videos");
+
+/** Uploads a generated video and adds it to the couple's collection. */
 export async function uploadVideo(
   slug: string,
-  video: { blob: Blob; mimeType: string; ext: string },
-  previousPath: string | null,
+  video: { blob: Blob; mimeType: string; ext: string; duration: number },
+  details: { sceneCount: number; trackTitle: string; transition: Transition },
   onProgress: (p: number) => void,
 ) {
-  const path = `events/${slug}/videos/${Date.now()}.${video.ext}`;
+  const d = doc(videosCol(slug));
+  const path = `events/${slug}/videos/${d.id}.${video.ext}`;
   const r = ref(storage(), path);
   const task = uploadBytesResumable(r, video.blob, { contentType: video.mimeType });
   task.on("state_changed", (s) => onProgress(s.totalBytes ? s.bytesTransferred / s.totalBytes : 0));
   await task;
   const url = await getDownloadURL(r);
-  await saveVideoDraft(slug, { videoUrl: url, videoPath: path, videoType: video.mimeType });
-  if (previousPath && previousPath !== path) deleteObject(ref(storage(), previousPath)).catch(() => {});
-  return { url, path };
+  await setDoc(d, {
+    url,
+    path,
+    mimeType: video.mimeType,
+    duration: video.duration,
+    ...details,
+    createdAt: serverTimestamp(),
+  });
+  return d.id;
+}
+
+export async function listVideos(slug: string): Promise<GeneratedVideo[]> {
+  const s = await getDocs(query(videosCol(slug), orderBy("createdAt", "desc"), limit(200)));
+  return s.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<GeneratedVideo, "id">) }));
+}
+
+export async function deleteVideo(slug: string, video: GeneratedVideo) {
+  await deleteDoc(doc(videosCol(slug), video.id));
+  await deleteObject(ref(storage(), video.path)).catch(() => {});
 }

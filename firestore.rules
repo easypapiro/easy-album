@@ -83,6 +83,11 @@ service cloud.firestore {
       match /video/{docId} {
         allow read, write: if isOwner(slug);
       }
+
+      // Video ricordo generati: solo gli sposi.
+      match /videos/{videoId} {
+        allow read, create, delete: if isOwner(slug);
+      }
     }
   }
 }

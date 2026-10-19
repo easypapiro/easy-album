@@ -51,8 +51,18 @@ export type VideoDraft = {
   customTrackUrl: string | null;
   customTrackPath: string | null;
   transition: Transition;
-  /** Last generated video, kept until the next one replaces it. */
-  videoUrl: string | null;
-  videoPath: string | null;
-  videoType: string | null;
+};
+
+/** A memory video rendered by the couple; every one is kept until deleted. */
+export type GeneratedVideo = {
+  id: string;
+  url: string;
+  path: string;
+  mimeType: string;
+  /** seconds */
+  duration: number;
+  sceneCount: number;
+  trackTitle: string;
+  transition: Transition;
+  createdAt: Timestamp | null;
 };

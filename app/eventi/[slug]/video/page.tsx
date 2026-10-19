@@ -4,10 +4,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useOwnedEvent } from "@/components/account-context";
 import { Check, Download, ImageIcon, Pause, Play, Plus, Sparkle } from "@/components/ui/icons";
-import { BackHeader, Button, Chip, Screen, SectionLabel, Sheet, Spinner, useResetOnHide, useToast } from "@/components/ui/kit";
+import { BackHeader, Button, ButtonLink, Chip, Screen, SectionLabel, Sheet, Spinner, useResetOnHide, useToast } from "@/components/ui/kit";
 import { cx } from "@/components/ui/button-class";
 import { RingDivider } from "@/components/ui/ornaments";
-import { downloadUrl, listAllMedia, saveFile } from "@/lib/album";
+import { listAllMedia, saveFile } from "@/lib/album";
 import { errorMessage } from "@/lib/errors";
 import { DEFAULT_DRAFT, getVideoDraft, saveVideoDraft, uploadTrack, uploadVideo } from "@/lib/events";
 import { eventTitle, duration as fmtDuration, longDate, shortDate, toneFor } from "@/lib/format";
@@ -248,10 +248,16 @@ export default function CreaVideo() {
     const local = URL.createObjectURL(video.blob);
     setJob({ phase: "upload", progress: 0, video, preview: local });
     try {
-      const { url, path } = await uploadVideo(event.slug, video, draft.videoPath, (progress) =>
-        setJob((j) => (j?.phase === "upload" ? { ...j, progress } : j)),
+      const trackTitle =
+        draft.track === "custom"
+          ? (draft.customTrackName ?? "Il vostro brano")
+          : (TRACKS.find((t) => t.id === draft.track) ?? TRACKS[0]).title;
+      await uploadVideo(
+        event.slug,
+        video,
+        { sceneCount: scenes.length, trackTitle, transition: draft.transition },
+        (progress) => setJob((j) => (j?.phase === "upload" ? { ...j, progress } : j)),
       );
-      setDraft((d) => (d ? { ...d, videoUrl: url, videoPath: path, videoType: video.mimeType } : d));
       setJob((j) => (j?.phase === "upload" ? { phase: "done", video, preview: local, saved: true } : j));
     } catch {
       // The video still exists locally: the couple can download it right away.
@@ -405,29 +411,9 @@ export default function CreaVideo() {
         </div>
       </section>
 
-      {draft.videoUrl && (
-        <section className="flex flex-col gap-2">
-          <SectionLabel>Il vostro ultimo video</SectionLabel>
-          <video
-            src={draft.videoUrl}
-            controls
-            playsInline
-            preload="metadata"
-            className="aspect-video w-full rounded-[14px] bg-ink"
-          />
-          <Button
-            variant="outline"
-            onClick={() => downloadUrl(draft.videoUrl!, fileName(draft.videoType === "video/webm" ? "webm" : "mp4"))}
-          >
-            <Download size={18} />
-            Scarica il video
-          </Button>
-        </section>
-      )}
-
       <Button size="xl" block className="mt-auto" disabled={Boolean(job)} onClick={generate}>
         <Sparkle size={20} />
-        {draft.videoUrl ? "Genera un nuovo video" : "Genera video"}
+        Genera video
       </Button>
 
       <Sheet open={Boolean(job)} onClose={closeJob} title={job?.phase === "done" ? "Il video è pronto" : undefined}>
@@ -468,16 +454,22 @@ export default function CreaVideo() {
             <video src={job.preview} controls playsInline className="aspect-video w-full rounded-[14px] bg-ink" />
             <p className="text-[13px] leading-normal text-muted">
               {job.saved
-                ? "L'abbiamo salvato nella vostra area: lo ritrovate sempre in questa pagina."
+                ? "L'abbiamo salvato tra i vostri video: lo ritrovate quando volete, insieme a quelli creati prima."
                 : "Non siamo riusciti a salvarlo online: scaricatelo adesso per non perderlo."}
             </p>
             <Button block onClick={() => saveFile(job.video.blob, fileName(job.video.ext)).catch(() => {})}>
               <Download size={18} />
               Scarica il video
             </Button>
-            <Button block variant="outline" onClick={closeJob}>
-              Chiudi
-            </Button>
+            {job.saved ? (
+              <ButtonLink block variant="outline" href={`/eventi/${event.slug}/video-creati`}>
+                Vedi tutti i vostri video
+              </ButtonLink>
+            ) : (
+              <Button block variant="outline" onClick={closeJob}>
+                Chiudi
+              </Button>
+            )}
           </div>
         )}
         {job?.phase === "error" && (

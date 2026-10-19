@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useOwnedEvent } from "@/components/account-context";
 import { QrCode } from "@/components/qr-code";
-import { ChevronLeft, ChevronRight, Download, Film, LinkIcon, Squares } from "@/components/ui/icons";
+import { ChevronLeft, ChevronRight, Download, Film, LinkIcon, Play, Squares } from "@/components/ui/icons";
 import { Button, Screen, useToast } from "@/components/ui/kit";
 import { RingDivider } from "@/components/ui/ornaments";
 import { getEventStats } from "@/lib/events";
@@ -141,6 +141,26 @@ export default function EventDashboard() {
           </span>
         </span>
         <ChevronRight size={20} />
+      </Link>
+
+      <Link
+        href={`/eventi/${event.slug}/video-creati`}
+        className="flex items-center gap-3.5 rounded-[22px] border border-line bg-white p-[18px] text-ink no-underline transition-colors hover:border-line-strong"
+      >
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-blush text-ink">
+          <Play size={20} />
+        </span>
+        <span className="flex flex-1 flex-col gap-0.5">
+          <span className="font-serif text-[22px] font-semibold">I vostri video</span>
+          <span className="text-[13px] leading-snug text-muted">
+            {stats?.generated == null
+              ? "Rivedete e scaricate i video che avete creato."
+              : stats.generated === 0
+                ? "Qui ritroverete i video che create."
+                : `${stats.generated} ${stats.generated === 1 ? "video creato" : "video creati"}: rivedeteli e scaricateli.`}
+          </span>
+        </span>
+        <ChevronRight size={20} className="text-muted" />
       </Link>
 
       {toast}
