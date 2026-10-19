@@ -51,4 +51,8 @@ export type VideoDraft = {
   customTrackUrl: string | null;
   customTrackPath: string | null;
   transition: Transition;
+  /** Last generated video, kept until the next one replaces it. */
+  videoUrl: string | null;
+  videoPath: string | null;
+  videoType: string | null;
 };

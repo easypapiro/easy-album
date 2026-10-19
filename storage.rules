@@ -27,6 +27,14 @@ service firebase.storage {
       allow delete: if isOwner(slug);
     }
 
+    // Video ricordo generato nel browser degli sposi.
+    match /events/{slug}/videos/{fileName} {
+      allow read, delete: if isOwner(slug);
+      allow create: if isOwner(slug)
+        && request.resource.size < 1024 * 1024 * 1024
+        && request.resource.contentType.matches('video/.*');
+    }
+
     // Brani caricati dagli sposi per il video.
     match /events/{slug}/music/{fileName} {
       allow read, delete: if isOwner(slug);

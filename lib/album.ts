@@ -132,25 +132,32 @@ export async function deleteMedia(slug: string, media: Media, ownerId: string) {
   );
 }
 
-export async function downloadMedia(media: Media) {
-  const ext = media.type === "video" ? "mp4" : "jpg";
-  const name = `${media.uploaderName.replace(/\s+/g, "-")}-${media.id}.${ext}`;
+/** On phones the share sheet is the natural way to "save to gallery". */
+export async function saveFile(blob: Blob, name: string) {
+  const file = new File([blob], name, { type: blob.type });
+  if (navigator.canShare?.({ files: [file] })) {
+    await navigator.share({ files: [file] });
+    return;
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+}
+
+/** Downloads a stored file, falling back to opening it when fetch is blocked. */
+export async function downloadUrl(url: string, name: string) {
   try {
-    const res = await fetch(media.url);
-    const blob = await res.blob();
-    const file = new File([blob], name, { type: blob.type });
-    // On phones the share sheet is the natural way to "save to gallery".
-    if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file] });
-      return;
-    }
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = name;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+    const res = await fetch(url);
+    await saveFile(await res.blob(), name);
   } catch (e) {
     if ((e as Error).name === "AbortError") return;
-    window.open(media.url, "_blank", "noopener");
+    window.open(url, "_blank", "noopener");
   }
+}
+
+export async function downloadMedia(media: Media) {
+  const ext = media.type === "video" ? "mp4" : "jpg";
+  await downloadUrl(media.url, `${media.uploaderName.replace(/\s+/g, "-")}-${media.id}.${ext}`);
 }

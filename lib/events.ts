@@ -12,7 +12,7 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { deleteObject, getDownloadURL, ref, uploadBytes, uploadBytesResumable } from "firebase/storage";
 import { db, storage } from "./firebase";
 import type { AlbumEvent, VideoDraft } from "./types";
 
@@ -107,6 +107,9 @@ export const DEFAULT_DRAFT: VideoDraft = {
   customTrackUrl: null,
   customTrackPath: null,
   transition: "fade",
+  videoUrl: null,
+  videoPath: null,
+  videoType: null,
 };
 
 const draftRef = (slug: string) => doc(db(), "events", slug, "video", "draft");
@@ -125,4 +128,22 @@ export async function uploadTrack(slug: string, file: File) {
   const r = ref(storage(), path);
   await uploadBytes(r, file, { contentType: file.type || "audio/mpeg" });
   return { path, url: await getDownloadURL(r) };
+}
+
+/** Uploads the generated video and records it on the draft, replacing the previous one. */
+export async function uploadVideo(
+  slug: string,
+  video: { blob: Blob; mimeType: string; ext: string },
+  previousPath: string | null,
+  onProgress: (p: number) => void,
+) {
+  const path = `events/${slug}/videos/${Date.now()}.${video.ext}`;
+  const r = ref(storage(), path);
+  const task = uploadBytesResumable(r, video.blob, { contentType: video.mimeType });
+  task.on("state_changed", (s) => onProgress(s.totalBytes ? s.bytesTransferred / s.totalBytes : 0));
+  await task;
+  const url = await getDownloadURL(r);
+  await saveVideoDraft(slug, { videoUrl: url, videoPath: path, videoType: video.mimeType });
+  if (previousPath && previousPath !== path) deleteObject(ref(storage(), previousPath)).catch(() => {});
+  return { url, path };
 }
