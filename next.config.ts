@@ -15,6 +15,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     rules: {
       "*.css": {
+        // Keep Tailwind off Next.js internals such as the next/font/google CSS
+        // modules, whose font-file URLs it would rewrite.
+        condition: { not: "foreign" },
         loaders: ["@tailwindcss/turbopack"],
         as: "*.css",
       },
